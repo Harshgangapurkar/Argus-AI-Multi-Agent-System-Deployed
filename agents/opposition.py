@@ -13,5 +13,5 @@ def generate_argument(topic: str) -> str:
         "logic, one key assumption, and a concise conclusion. "
         "Do not argue in favor. Keep the answer under 350 words.",
         temperature=0.4,
-        max_tokens=450,
+        max_tokens=900,
     )
