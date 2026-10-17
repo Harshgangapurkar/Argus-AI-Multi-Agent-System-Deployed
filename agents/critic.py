@@ -72,5 +72,5 @@ IMPORTANT:
             "Never omit a table cell. Never invent evidence."
         ),
         user_prompt=prompt,
-        temperature=0.1, max_tokens=1000,
+        temperature=0.1, max_tokens=600,
     )

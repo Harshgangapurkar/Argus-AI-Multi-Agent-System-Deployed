@@ -26,5 +26,5 @@ If the topic depends on facts not supplied, make that limitation explicit."""
     return complete(
         "You are ARGUS's final judge. Be independent, balanced, transparent about uncertainty, "
         "and willing to return a conditional verdict. Never invent evidence.",
-        prompt, temperature=0.1, max_tokens=1400,
+        prompt, temperature=0.1, max_tokens=600,
     )

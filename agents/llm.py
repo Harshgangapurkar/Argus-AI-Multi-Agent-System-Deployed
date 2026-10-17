@@ -53,15 +53,17 @@ def complete(
 
     try:
         response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=temperature,
-            max_completion_tokens=max_tokens,
-        )
+    model=model,
+    messages=[
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt},
+    ],
+    temperature=temperature,
+    max_completion_tokens=max_tokens,
+    reasoning_effort="low",
+)
 
+        
     except Exception as exc:
         # Keep the underlying exception available for debugging.
         raise RuntimeError(
