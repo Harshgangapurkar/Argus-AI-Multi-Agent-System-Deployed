@@ -1,40 +1,65 @@
-# ARGUS — Multi-Agent AI Debate Engine
+# ARGUS — AI Multi-Agent Debate System
 
-ARGUS uses four roles: Advocate, Opposition, Critic, and Judge. The two opening arguments run concurrently; the critic and judge then run in sequence because each depends on the previous outputs.
+🚀 **Live Demo:** https://argus-ai-multi-agent-system-deployed-harsh.streamlit.app
 
-## Run locally
+ARGUS is an AI-powered multi-agent debate system that evaluates a given topic through multiple perspectives. It uses specialized AI agents to build arguments, challenge opposing viewpoints, critically evaluate both sides, and deliver a final judgment.
 
-1. Create and activate a virtual environment.
-2. Install dependencies: `pip install -r requirements.txt`
-3. Create `.streamlit/secrets.toml` with your own values:
+## 🤖 AI Agents
 
-   ```toml
-   GROQ_API_KEY = "your-key"
-   GROQ_MODEL = "llama-3.3-70b-versatile"
+- **Advocate:** Develops arguments supporting the given topic.
+- **Opposition:** Challenges the topic with counterarguments.
+- **Critic:** Evaluates both sides based on relevance, logic, evidence, and completeness.
+- **Judge:** Analyzes the debate and delivers the final verdict and recommendation.
+
+## ✨ Key Features
+
+- Multi-agent debate workflow with specialized AI roles.
+- LLM-powered argument generation and evaluation using the Groq API.
+- Structured comparison and scoring of competing arguments.
+- Interactive Streamlit interface with expandable results and downloadable debate reports.
+
+## 🛠️ Tech Stack
+
+- **Language:** Python
+- **LLM API:** Groq API — OpenAI GPT-OSS 20B
+- **Framework:** Streamlit
+- **Architecture:** Multi-agent AI system
+
+## ⚙️ Run Locally
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/Harshgangapurkar/Argus-AI-Multi-Agent-System-Deployed.git
+   cd Argus-AI-Multi-Agent-System-Deployed
    ```
 
-4. Start the app: `streamlit run app.py`
+2. Install dependencies:
 
-Do not commit `.streamlit/secrets.toml`. The example file contains a placeholder only.
-
-## Deploy to Streamlit Community Cloud
-
-1. Push this project to a GitHub repository (without `.venv`, `.git`, or real secrets).
-2. In Streamlit Community Cloud, create an app from that repository and select `app.py` as the entry point.
-3. In **App settings → Secrets**, add:
-
-   ```toml
-   GROQ_API_KEY = "your-real-key"
-   GROQ_MODEL = "llama-3.3-70b-versatile"
+   ```bash
+   pip install -r requirements.txt
    ```
 
-4. Deploy. Visitors do not enter an API key; server-side calls use the key configured by the owner.
+3. Create `.streamlit/secrets.toml` and add your Groq configuration:
 
-## Performance and safety notes
+   ```toml
+   GROQ_API_KEY = "your_groq_api_key"
+   GROQ_MODEL = "openai/gpt-oss-20b"
+   ```
 
-- Advocate and Opposition run concurrently, reducing wait time compared with sequential calls. Critic and Judge remain sequential.
-- Reuses one API client; requests have timeouts and limited retries.
-- Prompts ask agents not to invent evidence and the Judge to disclose uncertainty.
-- Input is limited to 1,200 characters and the UI limits each browser session to 10 debates. This is a lightweight guardrail, **not** a robust public rate limiter: session limits can be reset and do not coordinate across users. For a public launch, add shared rate limiting/authentication and provider-side spend limits.
-- The app's API key remains server-side, but visitors' usage consumes the owner's provider quota and may incur charges.
-- Model names can change at the provider. If the default model is unavailable on your account, set `GROQ_MODEL` to a currently supported Groq model in Streamlit Secrets.
+4. Launch the application:
+
+   ```bash
+   streamlit run app.py
+   ```
+
+## 🔐 Security
+
+Store API keys in Streamlit Secrets or environment variables. Never commit API keys or `.streamlit/secrets.toml` to a public repository.
+
+## 👨‍💻 Author
+
+**Harsh Gangapurkar**
+
+[GitHub](https://github.com/Harshgangapurkar) · [Live Application](https://argus-ai-multi-agent-system-deployed-harsh.streamlit.app)
+
