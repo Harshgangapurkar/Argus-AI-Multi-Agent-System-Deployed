@@ -1,5 +1,18 @@
 
+import re
+
 from .llm import complete
+
+
+def _has_valid_winner(text: str) -> bool:
+    """Require an explicit FOR or AGAINST winner."""
+    return bool(
+        re.search(
+            r"(?im)^\s*(?:\*\*)?Winner\s*:\s*"
+            r"(?:\*\*)?\s*(FOR|AGAINST)\b",
+            text,
+        )
+    )
 
 
 def generate_verdict(
@@ -8,84 +21,136 @@ def generate_verdict(
     con_argument: str,
     critique: str,
 ) -> str:
-    prompt = f"""TOPIC: {topic}
+    system_prompt = """
+You are ARGUS's decisive final judge.
+You MUST choose exactly one winner: FOR or AGAINST.
+Never return a balanced, tied, or inconclusive verdict.
+Compare argument quality, logic, relevance, evidence,
+assumptions, and responses to objections.
+Use the critic's review as input, not unquestionable authority.
+Do not invent facts or claim external fact-checking.
+Be concise and acknowledge uncertainty without refusing to choose.
+"""
 
-ADVOCATE — CASE FOR:
+    user_prompt = f"""TOPIC: {topic}
+
+ADVOCATE — FOR:
 {pro_argument}
 
-OPPOSITION — CASE AGAINST:
+OPPOSITION — AGAINST:
 {con_argument}
 
 CRITIC'S REVIEW:
 {critique}
 
-YOUR TASK:
-Make a decisive final decision. ARGUS must select exactly one
-winner: FOR or AGAINST. Do not return "balanced", "both sides
-win", "neither side", or an inconclusive verdict.
+DECISION:
+Choose the side with the stronger overall argument.
 
-DECISION RULES:
-1. Evaluate logical validity, relevance, evidence, assumptions,
-   completeness, and responses to opposing arguments.
-2. Use the Critic's review as supporting input, not unquestionable
-   authority. Correctly reject unsupported criticism or scores.
-3. Compare the strongest arguments directly. Do not reward an
-   argument simply because it is longer or more confident.
-4. Select FOR if the Advocate's case is better supported overall.
-   Select AGAINST if the Opposition's case is better supported overall.
-5. If both sides appear equally strong, use a tie-breaker:
-   - Prefer the side with fewer unsupported assumptions.
-   - Then prefer the side with stronger logical reasoning.
-   - Then prefer the side that addresses more important objections.
-   - If still tied, select the side with the stronger argument
-     directly relevant to the topic.
-6. Never choose randomly or favor a side just because it is FOR
-   or AGAINST.
-7. Missing evidence does not automatically make the debate balanced.
-   Evaluate the arguments that were actually supplied.
-8. Do not invent facts, statistics, citations, or evidence.
-   State important uncertainty briefly, but still select a winner.
+Compare logic, relevance, evidence, assumptions, and weaknesses.
+Do not reward length or confidence alone.
+Missing evidence does not automatically mean a tie.
 
-REQUIRED OUTPUT:
+If the sides appear equally strong, break the tie by preferring:
+1. Fewer unsupported assumptions.
+2. Stronger logical reasoning.
+3. Better responses to important objections.
+4. Greater relevance to the topic.
 
-## 1. VERDICT
+You must choose FOR or AGAINST even when evidence is incomplete.
+This is a judgment of the submitted arguments, not proof of
+objective truth.
+
+OUTPUT FORMAT:
+
+## VERDICT
 Winner: FOR or AGAINST
-State the main reason in 1-2 sentences.
+Give the main reason in one or two sentences.
 
-## 2. SCORES
-FOR: X/10 — brief justification.
-AGAINST: X/10 — brief justification.
+## SCORES
+FOR: X/10 — brief reason.
+AGAINST: X/10 — brief reason.
 
-## 3. KEY REASONS
-Give the three most important reasons supporting your decision.
-Mention the winning side's strongest point and the losing side's
-most important weakness.
+## KEY REASONS
+Give the two strongest reasons supporting the winner.
 
-## 4. WHAT COULD CHANGE THE VERDICT
-Name the key missing evidence or assumption that could change
-the decision. If none is significant, say so briefly.
+## WHAT COULD CHANGE THE VERDICT
+State the most important missing evidence, if any.
 
-## 5. FINAL RECOMMENDATION
-Give a concise, practical recommendation consistent with the verdict.
+## FINAL RECOMMENDATION
+Give a concise recommendation consistent with the winner.
 
-STRICT OUTPUT RULES:
-- Stay within the 500-token completion budget.
-- Choose exactly one winner: FOR or AGAINST.
-- Never use "balanced" or "inconclusive" as the final verdict.
-- Be decisive without overstating the available evidence.
-- Keep every section concise and avoid repetition.
+STRICT RULES:
+- Stay within 500 completion tokens.
+- The winner must be exactly FOR or AGAINST.
+- Never use "balanced" or "inconclusive" as the verdict.
+- Do not invent facts, statistics, or citations.
+- Keep all sections concise.
 """
 
-    return complete(
-        system_prompt=(
-            "You are ARGUS's decisive final judge. Your responsibility "
-            "is to select one winner based on comparative argument "
-            "quality. Always choose FOR or AGAINST, using the specified "
-            "tie-breaker when necessary. Never return a balanced verdict. "
-            "Be fair, evidence-conscious, concise, and transparent "
-            "about uncertainty."
-        ),
-        user_prompt=prompt,
+    result = complete(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
         temperature=0.1,
         max_tokens=500,
     )
+
+    if _has_valid_winner(result):
+        return result
+
+    # One retry if the model ignored the mandatory winner format.
+    retry_prompt = f"""TOPIC: {topic}
+
+FOR argument:
+{pro_argument[:2500]}
+
+AGAINST argument:
+{con_argument[:2500]}
+
+Critic:
+{critique[:1500]}
+
+Your previous response did not provide a valid winner.
+
+Choose exactly one: FOR or AGAINST.
+Compare the arguments and use the stronger reasoning as the
+tie-breaker if needed. Do not return a balanced verdict.
+
+Output no more than 200 words in this format:
+
+## VERDICT
+Winner: FOR or AGAINST
+Reason: ...
+
+## SCORES
+FOR: X/10 — reason.
+AGAINST: X/10 — reason.
+
+## KEY REASONS
+Brief explanation.
+
+## WHAT COULD CHANGE THE VERDICT
+One brief sentence.
+
+## FINAL RECOMMENDATION
+One brief sentence.
+
+Never invent facts or citations.
+"""
+
+    result = complete(
+        system_prompt=(
+            "You are ARGUS's final judge. Output an explicit "
+            "Winner: FOR or Winner: AGAINST. Never return a tie."
+        ),
+        user_prompt=retry_prompt,
+        temperature=0.0,
+        max_tokens=500,
+    )
+
+    if not _has_valid_winner(result):
+        raise RuntimeError(
+            "Judge failed to produce a valid FOR/AGAINST winner "
+            "after one retry. Please retry the debate."
+        )
+
+    return result
