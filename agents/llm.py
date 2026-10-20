@@ -8,6 +8,7 @@ import streamlit as st
 from groq import Groq
 
 DEFAULT_MODEL = "openai/gpt-oss-20b"
+DEFAULT_MAX_TOKENS = 500
 
 
 def get_setting(name: str, default: str = "") -> str:
@@ -43,9 +44,18 @@ def complete(
     user_prompt: str,
     *,
     temperature: float = 0.3,
-    max_tokens: int = 1200,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
 ) -> str:
-    """Generate a completion and detect empty or truncated responses."""
+    """Generate text, rejecting empty or truncated responses."""
+
+    if not isinstance(system_prompt, str) or not system_prompt.strip():
+        raise ValueError("system_prompt must be a non-empty string.")
+
+    if not isinstance(user_prompt, str) or not user_prompt.strip():
+        raise ValueError("user_prompt must be a non-empty string.")
+
+    if not isinstance(max_tokens, int) or not 1 <= max_tokens <= 500:
+        raise ValueError("max_tokens must be between 1 and 500.")
 
     client = get_client()
     model = get_setting("GROQ_MODEL", DEFAULT_MODEL)
@@ -76,18 +86,16 @@ def complete(
     content = choice.message.content
     finish_reason = choice.finish_reason or "unknown"
 
-    # Never silently accept a response cut off by the token limit.
     if finish_reason == "length":
         raise RuntimeError(
-            f"Model '{model}' exhausted its completion budget "
-            f"({max_tokens} tokens). Shorten the prompt or adjust "
-            "the budget for this agent."
+            f"Model '{model}' reached its {max_tokens}-token "
+            "completion limit. Shorten the prompt or output format."
         )
 
-    if isinstance(content, str) and content.strip():
-        return content.strip()
+    if not isinstance(content, str) or not content.strip():
+        raise RuntimeError(
+            f"Model '{model}' returned no usable text. "
+            f"Finish reason: {finish_reason}."
+        )
 
-    raise RuntimeError(
-        f"Model '{model}' returned no usable text. "
-        f"Finish reason: {finish_reason}."
-    )
+    return content.strip()
